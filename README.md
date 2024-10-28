@@ -17,14 +17,12 @@ This application is a Flask-based web interface for processing and labeling enti
 - Python 3.7+
 - Flask
 - Sayari API credentials (for both production and development environments)
-- Google Translate API access (for translation feature)
 
 ## Installation
 
 1. Clone the repository:
    ```
-   git clone https://github.com/your-username/sayari-match-resolution-app.git
-   cd sayari-match-resolution-app
+   git clone https://github.com/aleksAperans/match-QA.git
    ```
 
 
@@ -49,7 +47,7 @@ This application is a Flask-based web interface for processing and labeling enti
 2. Open a web browser and navigate to `http://localhost:5000`
 
 3. Use the web interface to:
-   - Upload a CSV file with entity information
+   - Upload a CSV file with entity information (name, address, country)
    - Configure resolution parameters
    - Process the file through Sayari's resolution API
    - View and label the results
