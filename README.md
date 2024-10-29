@@ -22,36 +22,24 @@ This application is a Flask-based web interface for processing and labeling matc
 
 1. Clone the repository:
    ```
-   git clone https://github.com/aleksAperans/match-QA.git
+   git clone https://github.com/yourusername/your-repo-name.git
+   cd your-repo-name
    ```
 
-
-2. Create a `.env` file in the project root and add your Sayari API credentials:
+2. Install the required dependencies:
    ```
-   # Prod Credentials
-   client_id=your_production_client_id
-   client_secret=your_production_client_secret
-
-   # Dev Credentials
-   dev_client_id=your_development_client_id
-   dev_client_secret=your_development_client_secret
+   pip install -r requirements.txt
    ```
 
-## Usage
+3. Set up your .env file with your Sayari API credentials as described in the Configuration section.
 
-1. Start the Flask application:
+4. Run the application:
    ```
-   python app.py or python3 app.py
+   python app.py
    ```
 
-2. Open a web browser and navigate to `http://localhost:5000`
-
-3. Use the web interface to:
-   - Upload a CSV file with entity information (name, address, country)
-   - Configure resolution parameters
-   - Process the file through Sayari's resolution API
-   - View and label the results
-   - Export labeled results
+5. Open a web browser and navigate to `http://localhost:5000`
+```
 
 ## Project Structure
 
