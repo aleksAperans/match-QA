@@ -1,6 +1,6 @@
 # Sayari Match Resolution Labelling App
 
-This application is a Flask-based web interface for processing and labeling entity resolution results using the Sayari API. It allows users to upload CSV files containing entity information, process them through Sayari's resolution service, and manually label the results.
+This application is a Flask-based web interface for processing and labeling match resolution results using the Sayari API. It allows users to upload CSV files containing entity information, process them through Sayari's resolution service, and manually label the results.
 
 ## Features
 
