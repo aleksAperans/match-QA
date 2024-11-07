@@ -4,6 +4,7 @@ import tempfile
 import io
 import json
 import uuid
+import logging
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -34,6 +35,9 @@ processing_complete = threading.Event()
 
 # File-based storage for labels
 LABEL_STORAGE_DIR = 'label_storage'
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_label_storage_path(session_id):
     if not os.path.exists(LABEL_STORAGE_DIR):
@@ -112,7 +116,7 @@ def index():
 
             processed_results = process_file(filepath, environment, profile, name_min_percentage, name_min_tokens, minimum_score_threshold, search_fallback)
 
-            print(f"Debug - Summary after process_file: {results_summary}")
+            logging.info(f"Debug - Summary after process_file: {results_summary}")
 
             return redirect(url_for('results'))
 
@@ -269,7 +273,7 @@ def translate_text(text, target_language='en'):
         translator = GoogleTranslator(source='auto', target=target_language)
         return translator.translate(text)
     except Exception as e:
-        print(f"Translation error: {e}")
+        logging.error(f"Translation error: {e}")
         return text  # Return original text if translation fails
 
 def process_file(filepath, environment, profile, name_min_percentage, name_min_tokens, minimum_score_threshold, search_fallback, num_workers=3):
@@ -280,51 +284,70 @@ def process_file(filepath, environment, profile, name_min_percentage, name_min_t
         'total_rows': 0,
         'strong_matches': 0,
         'weak_matches': 0,
-        'no_matches': 0
+        'no_matches': 0,
+        'errors': 0
     }
 
     def process_row(row):
-        params = {k: v for k, v in row.items() if v}
-        params['profile'] = profile
-        if name_min_percentage:
-            params['name_min_percentage'] = int(name_min_percentage)
-        if name_min_tokens:
-            params['name_min_tokens'] = int(name_min_tokens)
-        if minimum_score_threshold:
-            params['minimum_score_threshold'] = int(minimum_score_threshold)
-        if search_fallback is not None:
-            params['search_fallback'] = search_fallback.lower() == 'true'
+        try:
+            logging.info(f"Processing row: {row}")
+            params = {k: v for k, v in row.items() if v}
+            params['profile'] = profile
+            if name_min_percentage:
+                params['name_min_percentage'] = int(name_min_percentage)
+            if name_min_tokens:
+                params['name_min_tokens'] = int(name_min_tokens)
+            if minimum_score_threshold:
+                params['minimum_score_threshold'] = int(minimum_score_threshold)
+            if search_fallback is not None:
+                params['search_fallback'] = search_fallback.lower() == 'true'
 
-        resolution = client.resolution.resolution(**params)
+            resolution = client.resolution.resolution(**params)
 
-        if resolution.data:
-            result = resolution.data[0]
-            match_strength = result.match_strength.value if result.match_strength else 'N/A'
-            name_exp = result.explanation.get('name', [{}])[0]
-            address_exp = result.explanation.get('address', [{}])[0]
+            if resolution.data:
+                result = resolution.data[0]
+                match_strength = result.match_strength.value if result.match_strength else 'N/A'
+                name_exp = result.explanation.get('name', [{}])[0]
+                address_exp = result.explanation.get('address', [{}])[0]
 
-            return {
-                'input': row,
-                'output': {
-                    'name': result.label,
-                    'address': result.addresses[0] if result.addresses else 'N/A',
-                    'country': result.countries[0] if result.countries else 'N/A',
-                    'match_strength': match_strength,
-                    'high_quality_match_name': getattr(name_exp, 'high_quality_match_name', 'N/A'),
-                    'address_match_quality': getattr(address_exp, 'match_quality', 'N/A'),
-                    'entity_id': result.entity_id,
-                    'profile': result.profile
+                return {
+                    'input': row,
+                    'output': {
+                        'name': result.label,
+                        'address': result.addresses[0] if result.addresses else 'N/A',
+                        'country': result.countries[0] if result.countries else 'N/A',
+                        'match_strength': match_strength,
+                        'high_quality_match_name': getattr(name_exp, 'high_quality_match_name', 'N/A'),
+                        'address_match_quality': getattr(address_exp, 'match_quality', 'N/A'),
+                        'entity_id': result.entity_id,
+                        'profile': result.profile
+                    }
                 }
-            }
-        else:
+            else:
+                return {
+                    'input': row,
+                    'output': {
+                        'name': 'No match found',
+                        'entity_id': 'N/A',
+                        'address': 'N/A',
+                        'country': 'N/A',
+                        'match_strength': 'No match',
+                        'high_quality_match_name': 'N/A',
+                        'address_match_quality': 'N/A',
+                        'profile': 'N/A'
+                    }
+                }
+        except Exception as e:
+            logging.error(f"Error processing row: {row}")
+            logging.error(f"Exception: {str(e)}")
             return {
                 'input': row,
                 'output': {
-                    'name': 'No match found',
+                    'name': 'Error',
                     'entity_id': 'N/A',
                     'address': 'N/A',
                     'country': 'N/A',
-                    'match_strength': 'No match',
+                    'match_strength': 'Error',
                     'high_quality_match_name': 'N/A',
                     'address_match_quality': 'N/A',
                     'profile': 'N/A'
@@ -350,6 +373,8 @@ def process_file(filepath, environment, profile, name_min_percentage, name_min_t
                 summary['weak_matches'] += 1
             elif match_strength == 'No match':
                 summary['no_matches'] += 1
+            elif match_strength == 'Error':
+                summary['errors'] += 1
 
     summary['total_rows'] = total_rows
 
@@ -359,12 +384,14 @@ def process_file(filepath, environment, profile, name_min_percentage, name_min_t
         summary['strong_matches_percent'] = (summary['strong_matches'] / total) * 100
         summary['weak_matches_percent'] = (summary['weak_matches'] / total) * 100
         summary['no_matches_percent'] = (summary['no_matches'] / total) * 100
+        summary['errors_percent'] = (summary['errors'] / total) * 100
     else:
         summary['strong_matches_percent'] = 0
         summary['weak_matches_percent'] = 0
         summary['no_matches_percent'] = 0
+        summary['errors_percent'] = 0
 
-    print(f"Debug - Final summary: {summary}")
+    logging.info(f"Debug - Final summary: {summary}")
     with results_summary_lock:
         global results_summary
         results_summary = summary
