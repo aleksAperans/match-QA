@@ -99,6 +99,8 @@ def index():
         name_min_tokens = request.form.get('name_min_tokens')
         minimum_score_threshold = request.form.get('minimum_score_threshold')
         search_fallback = request.form.get('search_fallback')
+        cutoff_threshold = request.form.get('cutoff_threshold')
+        skip_post_process = request.form.get('skip_post_process')
 
         if 'file' not in request.files:
             flash('No file part')
@@ -132,6 +134,8 @@ def upload():
     name_min_tokens = request.form.get('name_min_tokens')
     minimum_score_threshold = request.form.get('minimum_score_threshold')
     search_fallback = request.form.get('search_fallback')
+    cutoff_threshold = request.form.get('cutoff_threshold')
+    skip_post_process = request.form.get('skip_post_process')
 
     if 'file' not in request.files:
         flash('No file part')
