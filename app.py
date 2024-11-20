@@ -82,12 +82,20 @@ def get_sayari_client(environment):
             client_secret=os.getenv('client_secret'),
             base_url='https://api.sayari.com'
         )
-    else:
+    elif environment == 'develop':
         return Sayari(
             client_id=os.getenv('dev_client_id'),
             client_secret=os.getenv('dev_client_secret'),
             base_url='https://api.develop.sayari.com'
         )
+    elif environment == 'internal':
+        return Sayari(
+            client_id=os.getenv('internal_client_id'),
+            client_secret=os.getenv('internal_client_secret'),
+            base_url='https://api.internal.sayari.com'
+        )
+    else:
+        raise ValueError(f"Invalid environment: {environment}")
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -405,4 +413,4 @@ def process_file(filepath, environment, profile, name_min_percentage, name_min_t
     return processed_results
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=8080)
