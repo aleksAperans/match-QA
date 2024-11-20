@@ -114,6 +114,11 @@
                 color: #3498db;
             }
 
+            .comparison-output .small {
+                font-size: 0.85em;
+                margin-top: 0.25rem;
+            }
+
             .label-section {
                 background: #f8f9fa;
                 padding: 1.5rem;
@@ -319,8 +324,15 @@
                         <div class="comparison-arrow">
                             <i class="fas fa-arrow-right"></i>
                         </div>
-                        <div class="comparison-output output-name">
-                            {{ result.output.get('name', 'N/A') }}
+                        <div class="comparison-output">
+                            <div class="output-name">
+                                {{ result.output.get('name', 'N/A') }}
+                            </div>
+                            <div class="text-muted small">
+                                <strong>High Quality Match:</strong> {{
+                                result.output.get('high_quality_match_name',
+                                'N/A') }}
+                            </div>
                         </div>
                     </div>
 
@@ -335,8 +347,31 @@
                         <div class="comparison-arrow">
                             <i class="fas fa-arrow-right"></i>
                         </div>
-                        <div class="comparison-output output-address">
-                            {{ result.output.get('address', 'N/A') }}
+                        <div class="comparison-output">
+                            <div class="output-address">
+                                {{ result.output.get('address', 'N/A') }}
+                            </div>
+                            <div class="text-muted small">
+                                <strong>Match Quality:</strong> {{
+                                result.output.get('address_match_quality',
+                                'N/A') }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Country Comparison -->
+                    <div class="comparison-row">
+                        <div class="comparison-label">
+                            <i class="fas fa-globe me-2"></i>Country
+                        </div>
+                        <div class="comparison-input input-country">
+                            {{ result.input.get('country', 'N/A') }}
+                        </div>
+                        <div class="comparison-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                        <div class="comparison-output output-country">
+                            {{ result.output.get('country', 'N/A') }}
                         </div>
                     </div>
 
