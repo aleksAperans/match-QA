@@ -3,194 +3,342 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Sayari Match Resolution QA App 🧙‍♂️</title>
+        <title>Sayari Match Resolution QA App</title>
         <link
-            href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+            href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+            rel="stylesheet"
+        />
+        <link
+            href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
             rel="stylesheet"
         />
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <style>
+            body {
+                background-color: #f8f9fa;
+                font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            }
+
+            .main-container {
+                max-width: 800px;
+                margin: 2rem auto;
+                padding: 2rem;
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            }
+
+            .app-header {
+                text-align: center;
+                margin-bottom: 2rem;
+                color: #2c3e50;
+            }
+
+            .app-header i {
+                font-size: 2.5rem;
+                color: #3498db;
+                margin-bottom: 1rem;
+            }
+
+            .form-section {
+                background: #f8f9fa;
+                padding: 1.5rem;
+                border-radius: 8px;
+                margin-bottom: 1.5rem;
+            }
+
+            .form-section h5 {
+                color: #2c3e50;
+                margin-bottom: 1.5rem;
+                border-bottom: 2px solid #3498db;
+                padding-bottom: 0.5rem;
+            }
+
+            .form-control,
+            .form-select {
+                border-radius: 6px;
+                border: 1px solid #cbd5e0;
+            }
+
+            .form-control:focus,
+            .form-select:focus {
+                border-color: #3498db;
+                box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+            }
+
             .range-wrap {
                 position: relative;
-                margin: 0 auto 3rem;
+                margin: 1rem 0;
             }
+
             .range {
                 width: 100%;
+                cursor: pointer;
             }
+
             .bubble {
-                background: #007bff;
+                background: #3498db;
                 color: white;
                 padding: 4px 12px;
                 position: absolute;
                 border-radius: 4px;
                 left: 50%;
                 transform: translateX(-50%);
+                top: -30px;
             }
-            .bubble::after {
-                content: "";
-                position: absolute;
-                width: 2px;
-                height: 2px;
-                background: #007bff;
-                top: -1px;
-                left: 50%;
+
+            .submit-btn {
+                background: #3498db;
+                border: none;
+                padding: 0.8rem 2rem;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            }
+
+            .submit-btn:hover {
+                background: #2980b9;
+                transform: translateY(-2px);
+            }
+
+            #progressContainer {
+                background: white;
+                padding: 1.5rem;
+                border-radius: 8px;
+                margin-top: 2rem;
+            }
+
+            .progress {
+                height: 1.5rem;
+                border-radius: 1rem;
+                background-color: #e9ecef;
+            }
+
+            .progress-bar {
+                background-color: #3498db;
+                transition: width 0.5s ease;
+            }
+
+            .alert {
+                border-radius: 8px;
+                margin-bottom: 1.5rem;
             }
         </style>
     </head>
     <body>
-        <div class="container mt-5">
-            <h1 class="mb-4">Sayari Match Resolution QA App 🧙‍♂️</h1>
+        <div class="main-container">
+            <div class="app-header">
+                <i class="fas fa-magic"></i>
+                <h1>Sayari Match Resolution</h1>
+                <p class="text-muted">
+                    QA the match resolution algorithm via API
+                </p>
+            </div>
+
             {% with messages = get_flashed_messages() %} {% if messages %} {%
             for message in messages %}
-            <div class="alert alert-warning">{{ message }}</div>
+            <div
+                class="alert alert-warning alert-dismissible fade show"
+                role="alert"
+            >
+                {{ message }}
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="alert"
+                    aria-label="Close"
+                ></button>
+            </div>
             {% endfor %} {% endif %} {% endwith %}
+
             <form id="uploadForm" method="post" enctype="multipart/form-data">
-                <h5>Input Parameters</h5>
-                <div class="mb-3">
-                    <label for="environment" class="form-label"
-                        >Environment</label
-                    >
-                    <select
-                        name="environment"
-                        id="environment"
-                        class="form-select"
-                    >
-                        <option value="production">Production</option>
-                        <option value="develop">Develop</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="profile" class="form-label">Profile</label>
-                    <select name="profile" id="profile" class="form-select">
-                        <option value="corporate">Corporate</option>
-                        <option value="suppliers">Suppliers</option>
-                        <option value="search">Search</option>
-                        <option value="screen">Screen</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="minimum_score_threshold" class="form-label"
-                        >Minimum Score Threshold</label
-                    >
-                    <input
-                        type="number"
-                        name="minimum_score_threshold"
-                        id="minimum_score_threshold"
-                        class="form-control"
-                        min="0"
-                        max="100"
-                        placeholder="Default: 77"
-                    />
-                </div>
-                <div class="mb-3">
-                    <label for="search_fallback" class="form-label"
-                        >Search Fallback</label
-                    >
-                    <select
-                        name="search_fallback"
-                        id="search_fallback"
-                        class="form-select"
-                    >
-                        <option value="true">true</option>
-                        <option value="false" selected>false</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="cutoff_threshold" class="form-label"
-                        >Cutoff Threshold (0.0-1.0)</label
-                    >
-                    <input
-                        type="number"
-                        name="cutoff_threshold"
-                        id="cutoff_threshold"
-                        class="form-control"
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        placeholder="Default: 0.8"
-                    />
-                </div>
-                <div class="mb-3">
-                    <label for="skip_post_process" class="form-label"
-                        >Skip Post Process</label
-                    >
-                    <select
-                        name="skip_post_process"
-                        id="skip_post_process"
-                        class="form-select"
-                    >
-                        <option value="false">false</option>
-                        <option value="true">true</option>
-                    </select>
-                </div>
-                <hr />
-                <h5>Bypass Profile Logic</h5>
-                <div class="mb-3">
-                    <label for="name_min_percentage" class="form-label"
-                        >Name Min Percentage (0-100)</label
-                    >
-                    <input
-                        type="number"
-                        name="name_min_percentage"
-                        id="name_min_percentage"
-                        class="form-control"
-                        min="0"
-                        max="100"
-                    />
-                </div>
-                <div class="mb-3">
-                    <label for="name_min_tokens" class="form-label"
-                        >Name Min Tokens</label
-                    >
-                    <input
-                        type="number"
-                        name="name_min_tokens"
-                        id="name_min_tokens"
-                        class="form-control"
-                        min="0"
-                    />
-                </div>
-                <hr />
-                <h5>Parallel Processing</h5>
-                <div class="mb-3">
-                    <label for="num_workers" class="form-label"
-                        >Number of Workers (1-3)</label
-                    >
-                    <div class="range-wrap">
-                        <input
-                            type="range"
-                            class="form-range range"
-                            min="1"
-                            max="3"
-                            value="1"
-                            id="num_workers"
-                            name="num_workers"
-                        />
-                        <output class="bubble"></output>
+                <div class="form-section">
+                    <h5><i class="fas fa-cog me-2"></i>Input Parameters</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="environment" class="form-label"
+                                >Environment</label
+                            >
+                            <select
+                                name="environment"
+                                id="environment"
+                                class="form-select"
+                            >
+                                <option value="production">Production</option>
+                                <option value="develop">Develop</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="profile" class="form-label"
+                                >Profile</label
+                            >
+                            <select
+                                name="profile"
+                                id="profile"
+                                class="form-select"
+                            >
+                                <option value="corporate">Corporate</option>
+                                <option value="suppliers">Suppliers</option>
+                                <option value="search">Search</option>
+                                <option value="screen">Screen</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label for="file" class="form-label">Upload CSV File</label>
-                    <input
-                        type="file"
-                        name="file"
-                        id="file"
-                        class="form-control"
-                        accept=".csv"
-                    />
+
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-sliders-h me-2"></i>Advanced Settings
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label
+                                for="minimum_score_threshold"
+                                class="form-label"
+                                >Minimum Score Threshold</label
+                            >
+                            <input
+                                type="number"
+                                name="minimum_score_threshold"
+                                id="minimum_score_threshold"
+                                class="form-control"
+                                min="0"
+                                max="100"
+                                placeholder="Default: 77"
+                            />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="search_fallback" class="form-label"
+                                >Search Fallback</label
+                            >
+                            <select
+                                name="search_fallback"
+                                id="search_fallback"
+                                class="form-select"
+                            >
+                                <option value="true">True</option>
+                                <option value="false" selected>False</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cutoff_threshold" class="form-label"
+                                >Cutoff Threshold (0.0-1.0)</label
+                            >
+                            <input
+                                type="number"
+                                name="cutoff_threshold"
+                                id="cutoff_threshold"
+                                class="form-control"
+                                min="0"
+                                max="1"
+                                step="0.1"
+                                placeholder="Default: 0.8"
+                            />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="skip_post_process" class="form-label"
+                                >Skip Post Process</label
+                            >
+                            <select
+                                name="skip_post_process"
+                                id="skip_post_process"
+                                class="form-select"
+                            >
+                                <option value="false">False</option>
+                                <option value="true">True</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary">
-                    Upload and Process
-                </button>
+
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-code me-2"></i>Bypass Profile Logic
+                    </h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="name_min_percentage" class="form-label"
+                                >Name Min Percentage (0-100)</label
+                            >
+                            <input
+                                type="number"
+                                name="name_min_percentage"
+                                id="name_min_percentage"
+                                class="form-control"
+                                min="0"
+                                max="100"
+                            />
+                        </div>
+                        <div class="col-md-6">
+                            <label for="name_min_tokens" class="form-label"
+                                >Name Min Tokens</label
+                            >
+                            <input
+                                type="number"
+                                name="name_min_tokens"
+                                id="name_min_tokens"
+                                class="form-control"
+                                min="0"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-network-wired me-2"></i>Parallel
+                        Processing
+                    </h5>
+                    <div class="mb-3">
+                        <label for="num_workers" class="form-label"
+                            >Number of Workers (1-3)</label
+                        >
+                        <div class="range-wrap">
+                            <input
+                                type="range"
+                                class="form-range range"
+                                min="1"
+                                max="3"
+                                value="1"
+                                id="num_workers"
+                                name="num_workers"
+                            />
+                            <output class="bubble"></output>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h5><i class="fas fa-upload me-2"></i>File Upload</h5>
+                    <div class="mb-3">
+                        <label for="file" class="form-label"
+                            >Choose CSV File</label
+                        >
+                        <input
+                            type="file"
+                            name="file"
+                            id="file"
+                            class="form-control"
+                            accept=".csv"
+                        />
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button type="submit" class="btn btn-primary submit-btn">
+                        <i class="fas fa-play me-2"></i>Process Data
+                    </button>
+                </div>
             </form>
 
-            <div id="progressContainer" style="display: none" class="mt-4">
-                <h3>
-                    Processing: <span id="currentRow">0</span>/<span
-                        id="totalRows"
-                        >0</span
+            <div id="progressContainer" style="display: none">
+                <h4 class="text-center mb-3">
+                    Processing Progress
+                    <span class="text-muted"
+                        >(<span id="currentRow">0</span>/<span id="totalRows"
+                            >0</span
+                        >)</span
                     >
-                </h3>
+                </h4>
                 <div class="progress">
                     <div
                         id="progressBar"
@@ -207,6 +355,7 @@
             </div>
         </div>
 
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
             $(document).ready(function () {
                 $("#uploadForm").on("submit", function (e) {
