@@ -113,7 +113,6 @@
                 padding: 0 1rem;
                 color: #3498db;
             }
-
             .comparison-output .small {
                 font-size: 0.85em;
                 margin-top: 0.25rem;
@@ -227,7 +226,14 @@
                             class="btn btn-success"
                         >
                             <i class="fas fa-file-export me-2"></i>Export
-                            Results
+                            Results (csv)
+                        </a>
+                        <a
+                            href="{{ url_for('export_pdf_report') }}"
+                            class="btn btn-primary"
+                        >
+                            <i class="fas fa-file-pdf me-2"></i>Export PDF
+                            Report
                         </a>
                     </div>
                 </div>

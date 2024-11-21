@@ -9,6 +9,8 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from sayari.client import Sayari
+from io import BytesIO
+from pdf_generator import generate_pdf_report
 import threading
 from deep_translator import GoogleTranslator
 from threading import Lock
@@ -96,6 +98,109 @@ def get_sayari_client(environment):
         )
     else:
         raise ValueError(f"Invalid environment: {environment}")
+
+@app.route('/export_pdf_report')
+def export_pdf_report():
+    # Prepare the data for the PDF report
+    summary = results_summary
+
+    # Calculate country summary (you'll need to implement this based on your data structure)
+    country_summary = calculate_country_summary(processed_results)
+
+    # Calculate name quality details (you'll need to implement this based on your data structure)
+    name_quality = calculate_name_quality(processed_results)
+
+    # Calculate address quality details (you'll need to implement this based on your data structure)
+    address_quality = calculate_address_quality(processed_results)
+
+    # Generate the PDF
+    pdf = generate_pdf_report(summary, country_summary, name_quality, address_quality)
+
+    # Serve the PDF
+    return send_file(
+        BytesIO(pdf),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name='match_resolution_report.pdf'
+    )
+
+def calculate_country_summary(results):
+    country_summary = {}
+    for result in results:
+        country = result['input'].get('country', 'Unknown')
+        match_strength = result['output'].get('match_strength', 'No match')
+
+        if country not in country_summary:
+            country_summary[country] = {'strong': 0, 'weak': 0, 'no_match': 0, 'total': 0}
+
+        country_summary[country]['total'] += 1
+        if match_strength == 'strong':
+            country_summary[country]['strong'] += 1
+        elif match_strength == 'weak':
+            country_summary[country]['weak'] += 1
+        else:
+            country_summary[country]['no_match'] += 1
+
+    # Calculate percentages
+    for country, data in country_summary.items():
+        total = data['total']
+        data['strong_percent'] = (data['strong'] / total) * 100 if total > 0 else 0
+        data['weak_percent'] = (data['weak'] / total) * 100 if total > 0 else 0
+        data['no_match_percent'] = (data['no_match'] / total) * 100 if total > 0 else 0
+
+    return country_summary
+
+def calculate_name_quality(results):
+    name_quality = {
+        'strong_matches': {'true': 0, 'false': 0, 'na': 0, 'total': 0},
+        'weak_matches': {'true': 0, 'false': 0, 'na': 0, 'total': 0}
+    }
+
+    for result in results:
+        match_strength = result['output'].get('match_strength', 'No match')
+        high_quality_match_name = result['output'].get('high_quality_match_name', 'N/A')
+
+        if match_strength in ['strong', 'weak']:
+            category = f"{match_strength}_matches"
+            name_quality[category]['total'] += 1
+            if high_quality_match_name == 'true':
+                name_quality[category]['true'] += 1
+            elif high_quality_match_name == 'false':
+                name_quality[category]['false'] += 1
+            else:
+                name_quality[category]['na'] += 1
+
+    # Calculate percentages
+    for category, data in name_quality.items():
+        total = data['total']
+        data['true_percent'] = (data['true'] / total) * 100 if total > 0 else 0
+        data['false_percent'] = (data['false'] / total) * 100 if total > 0 else 0
+        data['na_percent'] = (data['na'] / total) * 100 if total > 0 else 0
+
+    return name_quality
+
+def calculate_address_quality(results):
+    address_quality = {'high': 0, 'medium': 0, 'low': 0, 'na': 0, 'total': 0}
+
+    for result in results:
+        address_match_quality = result['output'].get('address_match_quality', 'N/A')
+        address_quality['total'] += 1
+
+        if address_match_quality == 'high':
+            address_quality['high'] += 1
+        elif address_match_quality == 'medium':
+            address_quality['medium'] += 1
+        elif address_match_quality == 'low':
+            address_quality['low'] += 1
+        else:
+            address_quality['na'] += 1
+
+    # Calculate percentages
+    total = address_quality['total']
+    for key in ['high', 'medium', 'low', 'na']:
+        address_quality[f"{key}_percent"] = (address_quality[key] / total) * 100 if total > 0 else 0
+
+    return address_quality
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
