@@ -5,6 +5,8 @@ import io
 import json
 import uuid
 import logging
+import ratelimit
+import time
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -13,6 +15,8 @@ import threading
 from deep_translator import GoogleTranslator
 from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from ratelimit import limits, sleep_and_retry
+from time import sleep
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -288,6 +292,14 @@ def translate_text(text, target_language='en'):
         logging.error(f"Translation error: {e}")
         return text  # Return original text if translation fails
 
+CALLS = 5
+RATE_LIMIT = 1  # 1 second
+
+@sleep_and_retry
+@limits(calls=CALLS, period=RATE_LIMIT)
+def rate_limited_api_call(client, params):
+    return client.resolution.resolution(**params)
+
 def process_file(filepath, environment, profile, name_min_percentage, name_min_tokens, minimum_score_threshold, search_fallback, num_workers=3):
     global current_row, total_rows, results_summary, processed_results, processing_complete
     client = get_sayari_client(environment)
@@ -301,77 +313,101 @@ def process_file(filepath, environment, profile, name_min_percentage, name_min_t
     }
 
     def process_row(row):
-        try:
-            logging.info(f"Processing row: {row}")
-            params = {k: v for k, v in row.items() if v}
-            params['profile'] = profile
-            if name_min_percentage:
-                params['name_min_percentage'] = int(name_min_percentage)
-            if name_min_tokens:
-                params['name_min_tokens'] = int(name_min_tokens)
-            if minimum_score_threshold:
-                params['minimum_score_threshold'] = int(minimum_score_threshold)
-            if search_fallback is not None:
-                params['search_fallback'] = search_fallback.lower() == 'true'
+        max_retries = 3
+        retry_delay = 5  # seconds
 
-            resolution = client.resolution.resolution(**params)
+        for attempt in range(max_retries):
+            try:
+                logging.info(f"Processing row: {row}")
+                params = {k: v for k, v in row.items() if v}
+                params['profile'] = profile
+                if name_min_percentage:
+                    params['name_min_percentage'] = int(name_min_percentage)
+                if name_min_tokens:
+                    params['name_min_tokens'] = int(name_min_tokens)
+                if minimum_score_threshold:
+                    params['minimum_score_threshold'] = int(minimum_score_threshold)
+                if search_fallback is not None:
+                    params['search_fallback'] = search_fallback.lower() == 'true'
 
-            if resolution.data:
-                result = resolution.data[0]
-                match_strength = result.match_strength.value if result.match_strength else 'N/A'
-                name_exp = result.explanation.get('name', [{}])[0]
-                address_exp = result.explanation.get('address', [{}])[0]
+                resolution = rate_limited_api_call(client, params)
 
-                return {
-                    'input': row,
-                    'output': {
-                        'name': result.label,
-                        'address': result.addresses[0] if result.addresses else 'N/A',
-                        'country': result.countries[0] if result.countries else 'N/A',
-                        'match_strength': match_strength,
-                        'high_quality_match_name': getattr(name_exp, 'high_quality_match_name', 'N/A'),
-                        'address_match_quality': getattr(address_exp, 'match_quality', 'N/A'),
-                        'entity_id': result.entity_id,
-                        'profile': result.profile
+                if resolution.data:
+                    result = resolution.data[0]
+                    match_strength = result.match_strength.value if result.match_strength else 'N/A'
+                    name_exp = result.explanation.get('name', [{}])[0]
+                    address_exp = result.explanation.get('address', [{}])[0]
+
+                    return {
+                        'input': row,
+                        'output': {
+                            'name': result.label,
+                            'address': result.addresses[0] if result.addresses else 'N/A',
+                            'country': result.countries[0] if result.countries else 'N/A',
+                            'match_strength': match_strength,
+                            'high_quality_match_name': getattr(name_exp, 'high_quality_match_name', 'N/A'),
+                            'address_match_quality': getattr(address_exp, 'match_quality', 'N/A'),
+                            'entity_id': result.entity_id,
+                            'profile': result.profile
+                        }
                     }
-                }
-            else:
+                else:
+                    return {
+                        'input': row,
+                        'output': {
+                            'name': 'No match found',
+                            'entity_id': 'N/A',
+                            'address': 'N/A',
+                            'country': 'N/A',
+                            'match_strength': 'No match',
+                            'high_quality_match_name': 'N/A',
+                            'address_match_quality': 'N/A',
+                            'profile': 'N/A'
+                        }
+                    }
+
+            except Exception as e:
+                if "Too many requests" in str(e) and attempt < max_retries - 1:
+                    logging.warning(f"Rate limit exceeded. Retrying in {retry_delay} seconds...")
+                    sleep(retry_delay)
+                    continue
+                logging.error(f"Error processing row: {row}")
+                logging.error(f"Exception: {str(e)}")
                 return {
                     'input': row,
                     'output': {
-                        'name': 'No match found',
+                        'name': 'Error',
                         'entity_id': 'N/A',
                         'address': 'N/A',
                         'country': 'N/A',
-                        'match_strength': 'No match',
+                        'match_strength': 'Error',
                         'high_quality_match_name': 'N/A',
                         'address_match_quality': 'N/A',
                         'profile': 'N/A'
                     }
                 }
-        except Exception as e:
-            logging.error(f"Error processing row: {row}")
-            logging.error(f"Exception: {str(e)}")
-            return {
-                'input': row,
-                'output': {
-                    'name': 'Error',
-                    'entity_id': 'N/A',
-                    'address': 'N/A',
-                    'country': 'N/A',
-                    'match_strength': 'Error',
-                    'high_quality_match_name': 'N/A',
-                    'address_match_quality': 'N/A',
-                    'profile': 'N/A'
-                }
+
+        # If all retries failed
+        return {
+            'input': row,
+            'output': {
+                'name': 'Rate Limit Error',
+                'entity_id': 'N/A',
+                'address': 'N/A',
+                'country': 'N/A',
+                'match_strength': 'Error',
+                'high_quality_match_name': 'N/A',
+                'address_match_quality': 'N/A',
+                'profile': 'N/A'
             }
+        }
 
     with open(filepath, 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         rows = list(reader)
         total_rows = len(rows)
 
-    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+    with ThreadPoolExecutor(max_workers=2) as executor:
         future_to_row = {executor.submit(process_row, row): row for row in rows}
         for future in as_completed(future_to_row):
             result = future.result()
