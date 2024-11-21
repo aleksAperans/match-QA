@@ -391,7 +391,16 @@
                             <i class="fas fa-info-circle"></i>
                         </div>
                         <div class="comparison-output">
-                            ID: {{ result.output.get('entity_id', 'N/A') }}
+                            ID:
+                            {% if environment == 'develop' %}
+                                <a href="https://graph.develop.sayari.com/resource/entity/{{ result.output.get('entity_id', '') }}" target="_blank">
+                            {% elif environment == 'production' %}
+                                <a href="https://graph.sayari.com/resource/entity/{{ result.output.get('entity_id', '') }}" target="_blank">
+                            {% elif environment == 'internal' %}
+                                <a href="https://graph.internal.sayari.com/resource/entity/{{ result.output.get('entity_id', '') }}" target="_blank">
+                            {% endif %}
+                                {{ result.output.get('entity_id', 'N/A') }}
+                            </a>
                         </div>
                     </div>
                 </div>
